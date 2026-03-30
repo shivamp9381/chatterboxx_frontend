@@ -1,6 +1,7 @@
 // import React, { useEffect, useRef, useState } from "react";
 // import { MdAttachFile, MdSend } from "react-icons/md";
 // import useChatContext from "../context/ChatContext";
+// import useAuthContext from "../context/AuthContext";
 // import { useNavigate } from "react-router";
 // import SockJS from "sockjs-client";
 // import { Stomp } from "@stomp/stompjs";
@@ -19,189 +20,247 @@
 //     setCurrentUser,
 //   } = useChatContext();
 
+//   const { logout } = useAuthContext();
 //   const navigate = useNavigate();
+
 //   const [messages, setMessages] = useState([]);
 //   const [input, setInput] = useState("");
+//   const [users, setUsers] = useState([]);
+
 //   const chatBoxRef = useRef(null);
 //   const [stompClient, setStompClient] = useState(null);
 
-//   // Redirect if not connected
+//   // redirect
 //   useEffect(() => {
-//     if (!connected) {
-//       navigate("/");
-//     }
+//     if (!connected) navigate("/");
 //   }, [connected]);
 
-//   // Load existing messages
+//   // load old messages
 //   useEffect(() => {
-//     async function loadMessages() {
-//       try {
-//         const msgs = await getMessagess(roomId);
-//         setMessages(msgs);
-//       } catch (error) {
-//         console.error("Failed to load messages:", error);
-//       }
-//     }
-
 //     if (connected && roomId) {
-//       loadMessages();
+//       getMessagess(roomId).then(setMessages);
 //     }
 //   }, [connected, roomId]);
 
-//   // Auto-scroll
+//   // auto scroll
 //   useEffect(() => {
-//     if (chatBoxRef.current) {
-//       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
-//     }
+//     chatBoxRef.current?.scrollTo({
+//       top: chatBoxRef.current.scrollHeight,
+//       behavior: "smooth",
+//     });
 //   }, [messages]);
 
-//   // WebSocket connection
+//   // websocket
 //   useEffect(() => {
 //     if (!connected || !roomId) return;
 
 //     const sock = new SockJS(`${baseURL}/chat`);
 //     const client = Stomp.over(sock);
 
-//     client.debug = () => {};
+//     client.connect({}, () => {
+//       setStompClient(client);
+//       toast.success("Connected!");
 
-//     client.connect(
-//       {},
-//       () => {
-//         setStompClient(client);
-//         toast.success("Connected to room!");
+//       // 🔥 receive messages
+//       client.subscribe(`/topic/room/${roomId}`, (msg) => {
+//         const parsed = JSON.parse(msg.body);
 
-//         client.subscribe(`/topic/room/${roomId}`, (message) => {
-//           const newMessage = JSON.parse(message.body);
-//           setMessages((prev) => [...prev, newMessage]);
-//         });
-//       },
-//       (error) => {
-//         console.error("WebSocket error:", error);
-//         toast.error("Connection failed. Please rejoin.");
-//       }
-//     );
+//         console.log("Received FULL:", parsed);
 
-//     return () => {
-//       if (client && client.connected) {
-//         client.disconnect();
-//       }
-//     };
+//         setMessages((prev) => [
+//           ...prev,
+//           {
+//             ...parsed,
+//             content: parsed.content?.trim(),
+//           },
+//         ]);
+//       });
+
+//       // 🔥 users
+//       client.subscribe(`/topic/users/${roomId}`, (msg) => {
+//         setUsers(JSON.parse(msg.body));
+//       });
+
+//       // join
+//       client.send(`/app/join/${roomId}`, {}, currentUser);
+//     });
+
+//     return () => client.disconnect();
 //   }, [roomId, connected]);
 
-//   // Send message
+//   // send text message
 //   const sendMessage = () => {
-//     if (!stompClient || !stompClient.connected || !input.trim()) return;
-
-//     const message = {
-//       sender: currentUser,
-//       content: input.trim(),
-//       roomId: roomId,
-//     };
+//     if (!stompClient || !input.trim()) return;
 
 //     stompClient.send(
 //       `/app/sendMessage/${roomId}`,
 //       {},
-//       JSON.stringify(message)
+//       JSON.stringify({
+//         sender: currentUser,
+//         content: input.trim(),
+//         roomId,
+//       })
 //     );
 
 //     setInput("");
 //   };
 
-//   // Leave room
-//   const handleLogout = () => {
-//     if (stompClient && stompClient.connected) {
-//       stompClient.disconnect();
+//   // 🔥 FILE UPLOAD FIXED COMPLETELY
+//   const handleFileUpload = async (e) => {
+//     const file = e.target.files[0];
+//     if (!file) return;
+
+//     try {
+//       const formData = new FormData();
+//       formData.append("file", file);
+
+//       const res = await fetch(`${baseURL}/api/v1/files/upload`, {
+//         method: "POST",
+//         body: formData,
+//       });
+
+//       let url = await res.text();
+
+//       // 🔥 CRITICAL FIX
+//       url = url.replace(/"/g, "").trim();
+
+//       console.log("FINAL FILE URL:", url);
+
+//       if (!url.includes("http")) {
+//         toast.error("Upload failed");
+//         return;
+//       }
+
+//       // 🔥 send to chat
+//       stompClient.send(
+//         `/app/sendMessage/${roomId}`,
+//         {},
+//         JSON.stringify({
+//           sender: currentUser,
+//           content: url,
+//           roomId,
+//         })
+//       );
+
+//       toast.success("File sent!");
+//     } catch (err) {
+//       console.error(err);
+//       toast.error("Upload failed");
 //     }
+
+//     e.target.value = "";
+//   };
+
+//   // logout
+//   const handleLogout = () => {
+//     stompClient?.send(`/app/leave/${roomId}`, {}, currentUser);
+//     stompClient?.disconnect();
+
+//     logout();
 //     setConnected(false);
 //     setRoomId("");
 //     setCurrentUser("");
+
 //     navigate("/login");
 //   };
 
 //   return (
-//     <div className="flex flex-col h-screen max-w-3xl mx-auto w-full bg-slate-800 text-white">
+//     <div className="flex flex-col h-screen max-w-3xl mx-auto bg-slate-800 text-white">
 
-//       {/* Header */}
-//       <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 px-4 py-3 bg-gray-900 shadow-md">
-//         <h1 className="text-sm sm:text-lg">
+//       {/* HEADER */}
+//       <header className="flex justify-between items-center p-3 bg-gray-900">
+//         <h1 className="text-sm">
 //           Room: <span className="text-blue-400">{roomId}</span>
 //         </h1>
 
-//         <h1 className="text-sm sm:text-lg">
-//           User: <span className="text-green-400">{currentUser}</span>
-//         </h1>
+//         <p className="text-xs text-gray-400">
+//           Online: {users.join(", ")}
+//         </p>
 
 //         <button
 //           onClick={handleLogout}
-//           className="bg-red-500 hover:bg-red-700 px-3 py-1 rounded-full text-xs sm:text-sm w-fit"
+//           className="bg-red-500 px-3 py-1 rounded text-xs"
 //         >
-//           Leave Room
+//           Logout
 //         </button>
 //       </header>
 
-//       {/* Messages */}
+//       {/* MESSAGES */}
 //       <div
 //         ref={chatBoxRef}
-//         className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 bg-slate-700"
+//         className="flex-1 overflow-y-auto p-3 space-y-2"
 //       >
-//         {messages.map((message, index) => (
+//         {messages.map((msg, i) => (
 //           <div
-//             key={index}
+//             key={i}
 //             className={`flex ${
-//               message.sender === currentUser
+//               msg.sender === currentUser
 //                 ? "justify-end"
 //                 : "justify-start"
 //             }`}
 //           >
-//             <div
-//               className={`p-3 rounded-lg max-w-[75%] sm:max-w-md break-words shadow ${
-//                 message.sender === currentUser
-//                   ? "bg-green-600"
-//                   : "bg-gray-700"
-//               }`}
-//             >
-//               <p className="text-xs font-bold mb-1 opacity-80">
-//                 {message.sender}
-//               </p>
-//               <p className="text-sm">{message.content}</p>
-//               <p className="text-xs text-gray-300 mt-1">
-//                 {timeAgo(message.timestamp)}
+//             <div className="bg-gray-700 p-2 rounded max-w-[75%] break-words">
+//               <p className="text-xs">{msg.sender}</p>
+
+//               {/* 🔥 FINAL RENDER FIX */}
+//               {msg.content && msg.content.includes("http") ? (
+//                 msg.content.match(/\.(jpeg|jpg|png|gif)$/i) ? (
+//                   <img
+//                     src={msg.content}
+//                     alt="file"
+//                     className="max-w-xs rounded mt-1"
+//                   />
+//                 ) : (
+//                   <a
+//                     href={msg.content}
+//                     target="_blank"
+//                     rel="noreferrer"
+//                     className="text-blue-300 underline break-all"
+//                   >
+//                     📎 Open File
+//                   </a>
+//                 )
+//               ) : (
+//                 <p>{msg.content}</p>
+//               )}
+
+//               <p className="text-xs text-gray-400">
+//                 {timeAgo(msg.timestamp)}
 //               </p>
 //             </div>
 //           </div>
 //         ))}
-
-//         {messages.length === 0 && (
-//           <div className="text-center text-gray-400 mt-20">
-//             No messages yet. Say hello! 👋
-//           </div>
-//         )}
 //       </div>
 
-//       {/* Input */}
-//       <div className="flex items-center gap-2 p-3 sm:p-4 bg-gray-900 border-t border-gray-700">
+//       {/* INPUT */}
+//       <div className="flex gap-2 p-3 bg-gray-900">
 //         <input
 //           value={input}
 //           onChange={(e) => setInput(e.target.value)}
 //           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-//           type="text"
-//           placeholder="Type your message..."
-//           className="flex-1 min-w-0 px-3 py-2 sm:px-4 sm:py-2 rounded-full bg-gray-800 outline-none text-white placeholder-gray-400 text-sm sm:text-base"
+//           className="flex-1 px-3 py-2 rounded-full bg-gray-700 outline-none"
+//           placeholder="Type message..."
+//         />
+
+//         <input
+//           type="file"
+//           hidden
+//           id="fileInput"
+//           onChange={handleFileUpload}
 //         />
 
 //         <button
-//           title="Attach file"
-//           className="shrink-0 bg-purple-600 hover:bg-purple-700 p-2 rounded-full"
+//           onClick={() => document.getElementById("fileInput").click()}
+//           className="bg-purple-600 p-2 rounded-full"
 //         >
-//           <MdAttachFile size={18} />
+//           <MdAttachFile />
 //         </button>
 
 //         <button
 //           onClick={sendMessage}
-//           title="Send message"
-//           className="shrink-0 bg-green-600 hover:bg-green-700 p-2 rounded-full"
+//           className="bg-green-600 p-2 rounded-full"
 //         >
-//           <MdSend size={18} />
+//           <MdSend />
 //         </button>
 //       </div>
 //     </div>
@@ -212,27 +271,16 @@
 
 
 import React, { useEffect, useRef, useState } from "react";
-import { MdAttachFile, MdSend } from "react-icons/md";
+import { MdSend } from "react-icons/md";
 import useChatContext from "../context/ChatContext";
 import useAuthContext from "../context/AuthContext";
 import { useNavigate } from "react-router";
 import SockJS from "sockjs-client";
 import { Stomp } from "@stomp/stompjs";
-import toast from "react-hot-toast";
 import { baseURL } from "../config/AxiosHelper";
-import { getMessagess } from "../services/RoomService";
-import { timeAgo } from "../config/helper";
 
 const ChatPage = () => {
-  const {
-    roomId,
-    currentUser,
-    connected,
-    setConnected,
-    setRoomId,
-    setCurrentUser,
-  } = useChatContext();
-
+  const { roomId, currentUser, connected } = useChatContext();
   const { logout } = useAuthContext();
   const navigate = useNavigate();
 
@@ -241,44 +289,25 @@ const ChatPage = () => {
   const [typingUser, setTypingUser] = useState("");
   const [users, setUsers] = useState([]);
 
-  const chatBoxRef = useRef(null);
-  const [stompClient, setStompClient] = useState(null);
+  const stompRef = useRef(null);
 
   useEffect(() => {
     if (!connected) navigate("/");
   }, [connected]);
 
   useEffect(() => {
-    if (connected && roomId) {
-      getMessagess(roomId).then(setMessages);
-    }
-  }, [connected, roomId]);
-
-  useEffect(() => {
-    if (chatBoxRef.current) {
-      chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    if (!connected || !roomId) return;
-
     const sock = new SockJS(`${baseURL}/chat`);
     const client = Stomp.over(sock);
 
-    client.reconnectDelay = 5000;
-    client.heartbeatIncoming = 4000;
-    client.heartbeatOutgoing = 4000;
-
     client.connect({}, () => {
-      setStompClient(client);
+      stompRef.current = client;
 
-      // 🔥 messages
+      // messages
       client.subscribe(`/topic/room/${roomId}`, (msg) => {
         setMessages((prev) => [...prev, JSON.parse(msg.body)]);
       });
 
-      // 🔥 typing
+      // typing
       client.subscribe(`/topic/typing/${roomId}`, (msg) => {
         const user = msg.body;
         if (user !== currentUser) {
@@ -287,127 +316,133 @@ const ChatPage = () => {
         }
       });
 
-      // 🔥 users
+      // users
       client.subscribe(`/topic/users/${roomId}`, (msg) => {
         setUsers(JSON.parse(msg.body));
       });
 
-      // 🔥 notify join
+      // seen
+      client.subscribe(`/topic/seen/${roomId}`, (msg) => {
+        const id = msg.body;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === id ? { ...m, seen: true } : m
+          )
+        );
+      });
+
+      // private
+      client.subscribe(`/topic/private`, (msg) => {
+        const message = JSON.parse(msg.body);
+        if (message.roomId.includes(currentUser)) {
+          setMessages((prev) => [...prev, message]);
+        }
+      });
+
       client.send(`/app/join/${roomId}`, {}, currentUser);
     });
 
     return () => client.disconnect();
-  }, [roomId, connected]);
+  }, []);
 
   const sendMessage = () => {
-    if (!stompClient || !input.trim()) return;
-
-    stompClient.send(`/app/sendMessage/${roomId}`, {}, JSON.stringify({
-      sender: currentUser,
-      content: input,
-      roomId,
-    }));
-
+    stompRef.current.send(
+      `/app/sendMessage/${roomId}`,
+      {},
+      JSON.stringify({
+        sender: currentUser,
+        content: input,
+        roomId,
+      })
+    );
     setInput("");
   };
 
   const handleTyping = () => {
-    stompClient?.send(`/app/typing/${roomId}`, {}, currentUser);
+    stompRef.current.send(`/app/typing/${roomId}`, {}, currentUser);
   };
 
   const handleLogout = () => {
-    stompClient?.disconnect();
+    stompRef.current.send(`/app/leave/${roomId}`, {}, currentUser);
     logout();
-    setConnected(false);
     navigate("/login");
   };
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch(`${baseURL}/api/v1/files/upload`, {
-      method: "POST",
-      body: formData,
-    });
-
-    const url = await res.text();
-
-    stompClient.send(`/app/sendMessage/${roomId}`, {}, JSON.stringify({
-      sender: currentUser,
-      content: url,
-      roomId,
-    }));
-  };
+  const getPrivateRoom = (u1, u2) =>
+    [u1, u2].sort().join("_");
 
   return (
-    <div className="flex flex-col h-screen max-w-3xl mx-auto w-full bg-slate-800 text-white">
+    <div className="flex flex-col h-screen bg-slate-800 text-gray-300">
 
       {/* HEADER */}
-      <header className="flex flex-col sm:flex-row justify-between items-center p-3 bg-gray-900">
-        <div className="text-sm">
-          Room: <span className="text-blue-400">{roomId}</span>
-        </div>
-
-        <div className="text-xs text-gray-400">
-          Online: {users.join(", ")}
-        </div>
-
-        <button onClick={handleLogout} className="bg-red-500 px-3 py-1 rounded text-xs">
-          Logout
-        </button>
-      </header>
+      <div className="flex justify-between p-3 bg-gray-900">
+        <span>Room: {roomId}</span>
+        <span>{users.join(", ")}</span>
+        <button onClick={handleLogout}>Logout</button>
+      </div>
 
       {/* MESSAGES */}
-      <div ref={chatBoxRef} className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto p-3">
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.sender === currentUser ? "justify-end" : "justify-start"}`}>
-            <div className="bg-gray-700 p-2 rounded max-w-[75%]">
-              <p className="text-xs">{msg.sender}</p>
+          <div key={i} className="mb-2">
+            <p className="text-xs">{msg.sender}</p>
+            <p>{msg.content}</p>
 
-              {msg.content.startsWith("http") ? (
-                <a href={msg.content} target="_blank" className="text-blue-300 underline">
-                  View File
-                </a>
-              ) : (
-                <p>{msg.content}</p>
-              )}
-
-              <p className="text-xs text-gray-400">{timeAgo(msg.timestamp)}</p>
-            </div>
+            {msg.sender === currentUser && (
+              <span className="text-xs">
+                {msg.seen ? "✔✔" : "✔"}
+              </span>
+            )}
           </div>
         ))}
       </div>
 
       {/* TYPING */}
       {typingUser && (
-        <p className="text-xs text-gray-400 px-3">{typingUser} is typing...</p>
+        <p className="text-xs px-3 animate-pulse">
+          {typingUser} is typing...
+        </p>
       )}
 
-      {/* INPUT */}
-      <div className="flex gap-2 p-3 bg-gray-900">
+      {/* INPUT
+      <div className="flex p-3 bg-gray-900">
         <input
           value={input}
           onChange={(e) => {
             setInput(e.target.value);
             handleTyping();
           }}
-          className="flex-1 min-w-0 px-3 py-2 rounded-full bg-gray-700"
+          className="flex-1 px-2"
         />
-
-        <input type="file" hidden id="fileInput" onChange={handleFileUpload} />
-
-        <button onClick={() => document.getElementById("fileInput").click()}>
-          <MdAttachFile />
-        </button>
-
         <button onClick={sendMessage}>
           <MdSend />
         </button>
-      </div>
+      </div> */}
+
+      <div className="w-full bg-gray-900 p-3 flex items-center gap-2">
+
+  {/* INPUT */}
+  <input
+    value={input}
+    onChange={(e) => {
+      setInput(e.target.value);
+      handleTyping();
+    }}
+    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+    placeholder="Type your message..."
+    className="flex-1 min-w-0 px-4 py-2 rounded-full bg-gray-700 text-white outline-none"
+  />
+
+  {/* SEND BUTTON */}
+  <button
+    onClick={sendMessage}
+    className="flex-shrink-0 bg-green-500 hover:bg-green-600 p-2 rounded-full text-white"
+  >
+    <MdSend size={20} />
+  </button>
+
+</div>
+      
     </div>
   );
 };
