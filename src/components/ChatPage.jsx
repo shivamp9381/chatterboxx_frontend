@@ -1,230 +1,3 @@
-// // import React, { useEffect, useRef, useState } from "react";
-// // import { MdAttachFile, MdSend } from "react-icons/md";
-// // import useChatContext from "../context/ChatContext";
-// // import { useNavigate } from "react-router";
-// // import SockJS from "sockjs-client";
-// // import { Stomp } from "@stomp/stompjs";
-// // import toast from "react-hot-toast";
-// // import { baseURL } from "../config/AxiosHelper";
-// // import { getMessagess } from "../services/RoomService";
-// // import { timeAgo } from "../config/helper";
-// // const ChatPage = () => {
-// //   const {
-// //     roomId,
-// //     currentUser,
-// //     connected,
-// //     setConnected,
-// //     setRoomId,
-// //     setCurrentUser,
-// //   } = useChatContext();
-// //   // console.log(roomId);
-// //   // console.log(currentUser);
-// //   // console.log(connected);
-
-// //   const navigate = useNavigate();
-// //   useEffect(() => {
-// //     if (!connected) {
-// //       navigate("/");
-// //     }
-// //   }, [connected, roomId, currentUser]);
-
-// //   const [messages, setMessages] = useState([]);
-// //   const [input, setInput] = useState("");
-// //   const inputRef = useRef(null);
-// //   const chatBoxRef = useRef(null);
-// //   const [stompClient, setStompClient] = useState(null);
-
-// //   //page init:
-// //   //messages ko load karne honge
-
-// //   useEffect(() => {
-// //     async function loadMessages() {
-// //       try {
-// //         const messages = await getMessagess(roomId);
-// //         // console.log(messages);
-// //         setMessages(messages);
-// //       } catch (error) {}
-// //     }
-// //     if (connected) {
-// //       loadMessages();
-// //     }
-// //   }, []);
-
-// //   //scroll down
-
-// //   useEffect(() => {
-// //     if (chatBoxRef.current) {
-// //       chatBoxRef.current.scroll({
-// //         top: chatBoxRef.current.scrollHeight,
-// //         behavior: "smooth",
-// //       });
-// //     }
-// //   }, [messages]);
-
-// //   //stompClient ko init karne honge
-// //   //subscribe
-
-// //   useEffect(() => {
-// //     const connectWebSocket = () => {
-// //       ///SockJS
-// //       const sock = new SockJS(`${baseURL}/chat`);
-// //       const client = Stomp.over(sock);
-
-// //       client.connect({}, () => {
-// //         setStompClient(client);
-
-// //         toast.success("connected");
-
-// //         client.subscribe(`/topic/room/${roomId}`, (message) => {
-// //           console.log(message);
-
-// //           const newMessage = JSON.parse(message.body);
-
-// //           setMessages((prev) => [...prev, newMessage]);
-
-// //           //rest of the work after success receiving the message
-// //         });
-// //       });
-// //     };
-
-// //     if (connected) {
-// //       connectWebSocket();
-// //     }
-
-// //     //stomp client
-// //   }, [roomId]);
-
-// //   //send message handle
-
-// //   const sendMessage = async () => {
-// //     if (stompClient && connected && input.trim()) {
-// //       console.log(input);
-
-// //       const message = {
-// //         sender: currentUser,
-// //         content: input,
-// //         roomId: roomId,
-// //       };
-
-// //       stompClient.send(
-// //         `/app/sendMessage/${roomId}`,
-// //         {},
-// //         JSON.stringify(message)
-// //       );
-// //       setInput("");
-// //     }
-
-// //     //
-// //   };
-
-// //   function handleLogout() {
-// //     stompClient.disconnect();
-// //     setConnected(false);
-// //     setRoomId("");
-// //     setCurrentUser("");
-// //     navigate("/");
-// //   }
-
-// //   return (
-// //     <div className="">
-// //       {/* this is a header */}
-// //       <header className="dark:border-gray-700  fixed w-full dark:bg-gray-900 py-5 shadow flex justify-around items-center">
-// //         {/* room name container */}
-// //         <div>
-// //           <h1 className="text-xl font-semibold">
-// //             Room : <span>{roomId}</span>
-// //           </h1>
-// //         </div>
-// //         {/* username container */}
-
-// //         <div>
-// //           <h1 className="text-xl font-semibold">
-// //             User : <span>{currentUser}</span>
-// //           </h1>
-// //         </div>
-// //         {/* button: leave room */}
-// //         <div>
-// //           <button
-// //             onClick={handleLogout}
-// //             className="dark:bg-red-500 dark:hover:bg-red-700 px-3 py-2 rounded-full"
-// //           >
-// //             Leave Room
-// //           </button>
-// //         </div>
-// //       </header>
-
-// //       <main
-// //         ref={chatBoxRef}
-// //         className="py-20 px-10   w-2/3 dark:bg-slate-600 mx-auto h-screen overflow-auto "
-// //       >
-// //         {messages.map((message, index) => (
-// //           <div
-// //             key={index}
-// //             className={`flex ${
-// //               message.sender === currentUser ? "justify-end" : "justify-start"
-// //             } `}
-// //           >
-// //             <div
-// //               className={`my-2 ${
-// //                 message.sender === currentUser ? "bg-green-800" : "bg-gray-800"
-// //               } p-2 max-w-xs rounded`}
-// //             >
-// //               <div className="flex flex-row gap-2">
-// //                 <img
-// //                   className="h-10 w-10"
-// //                   src={"https://avatar.iran.liara.run/public/43"}
-// //                   alt=""
-// //                 />
-// //                 <div className="flex flex-col gap-1">
-// //                   <p className="text-sm font-bold">{message.sender}</p>
-// //                   <p>{message.content}</p>
-// //                   <p className="text-xs text-gray-400">
-// //                     {timeAgo(message.timeStamp)}
-// //                   </p>
-// //                 </div>
-// //               </div>
-// //             </div>
-// //           </div>
-// //         ))}
-// //       </main>
-// //       {/* input message container */}
-// //       <div className=" fixed bottom-4 w-full h-16 ">
-// //         <div className="h-full  pr-10 gap-4 flex items-center justify-between rounded-full w-1/2 mx-auto dark:bg-gray-900">
-// //           <input
-// //             value={input}
-// //             onChange={(e) => {
-// //               setInput(e.target.value);
-// //             }}
-// //             onKeyDown={(e) => {
-// //               if (e.key === "Enter") {
-// //                 sendMessage();
-// //               }
-// //             }}
-// //             type="text"
-// //             placeholder="Type your message here..."
-// //             className=" w-full  dark:border-gray-600 b dark:bg-gray-800  px-5 py-2 rounded-full h-full focus:outline-none  "
-// //           />
-
-// //           <div className="flex gap-1">
-// //             <button className="dark:bg-purple-600 h-10 w-10  flex   justify-center items-center rounded-full">
-// //               <MdAttachFile size={20} />
-// //             </button>
-// //             <button
-// //               onClick={sendMessage}
-// //               className="dark:bg-green-600 h-10 w-10  flex   justify-center items-center rounded-full"
-// //             >
-// //               <MdSend size={20} />
-// //             </button>
-// //           </div>
-// //         </div>
-// //       </div>
-// //     </div>
-// //   );
-// // };
-
-// // export default ChatPage;
-
-
 // import React, { useEffect, useRef, useState } from "react";
 // import { MdAttachFile, MdSend } from "react-icons/md";
 // import useChatContext from "../context/ChatContext";
@@ -247,72 +20,78 @@
 //   } = useChatContext();
 
 //   const navigate = useNavigate();
-
 //   const [messages, setMessages] = useState([]);
 //   const [input, setInput] = useState("");
 //   const chatBoxRef = useRef(null);
 //   const [stompClient, setStompClient] = useState(null);
 
-//   // 🔐 Redirect if not connected
+//   // Redirect if not connected
 //   useEffect(() => {
 //     if (!connected) {
 //       navigate("/");
 //     }
 //   }, [connected]);
 
-//   // 📩 Load old messages
+//   // Load existing messages
 //   useEffect(() => {
 //     async function loadMessages() {
 //       try {
 //         const msgs = await getMessagess(roomId);
 //         setMessages(msgs);
 //       } catch (error) {
-//         console.log(error);
+//         console.error("Failed to load messages:", error);
 //       }
 //     }
 
-//     if (connected) {
+//     if (connected && roomId) {
 //       loadMessages();
 //     }
 //   }, [connected, roomId]);
 
-//   // 📜 Auto scroll
+//   // Auto-scroll on new messages
 //   useEffect(() => {
 //     if (chatBoxRef.current) {
-//       chatBoxRef.current.scrollTop =
-//         chatBoxRef.current.scrollHeight;
+//       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
 //     }
 //   }, [messages]);
 
-//   // 🔌 WebSocket connect
+//   // Connect WebSocket
 //   useEffect(() => {
-//     if (!connected) return;
+//     if (!connected || !roomId) return;
 
 //     const sock = new SockJS(`${baseURL}/chat`);
 //     const client = Stomp.over(sock);
 
+//     // Suppress STOMP console noise
+//     client.debug = () => {};
+
 //     client.connect({}, () => {
 //       setStompClient(client);
-//       toast.success("Connected to chat");
+//       toast.success("Connected to room!");
 
 //       client.subscribe(`/topic/room/${roomId}`, (message) => {
 //         const newMessage = JSON.parse(message.body);
 //         setMessages((prev) => [...prev, newMessage]);
 //       });
+//     }, (error) => {
+//       console.error("WebSocket error:", error);
+//       toast.error("Connection failed. Please rejoin.");
 //     });
 
 //     return () => {
-//       if (client) client.disconnect();
+//       if (client && client.connected) {
+//         client.disconnect();
+//       }
 //     };
 //   }, [roomId, connected]);
 
-//   // 📤 Send message
+//   // Send message
 //   const sendMessage = () => {
-//     if (!stompClient || !input.trim()) return;
+//     if (!stompClient || !stompClient.connected || !input.trim()) return;
 
 //     const message = {
 //       sender: currentUser,
-//       content: input,
+//       content: input.trim(),
 //       roomId: roomId,
 //     };
 
@@ -325,82 +104,107 @@
 //     setInput("");
 //   };
 
-//   // 🚪 Logout
-//   const handleLogout = () => {
-//     if (stompClient) stompClient.disconnect();
+//   // // Leave room
+//   // const handleLogout = () => {
+//   //   if (stompClient && stompClient.connected) {
+//   //     stompClient.disconnect();
+//   //   }
+//   //   setConnected(false);
+//   //   setRoomId("");
+//   //   setCurrentUser("");
+//   //   navigate("/");
+//   // };
 
-//     setConnected(false);
-//     setRoomId("");
-//     setCurrentUser("");
-//     navigate("/");
-//   };
+// const handleLogout = () => {
+//   if (stompClient && stompClient.connected) {
+//     stompClient.disconnect();
+//   }
+//   setConnected(false);
+//   setRoomId("");
+//   setCurrentUser("");
+//   logout();           // ✅ clears JWT from localStorage + AuthContext
+//   navigate("/login"); // ✅ send to login instead of "/"
+// };
 
 //   return (
 //     <div className="flex flex-col h-screen dark:bg-slate-800 text-white">
-      
-//       {/* 🔝 Header */}
-//       <header className="flex justify-between items-center px-6 py-4 bg-gray-900 shadow">
-//         <h1 className="font-semibold">Room: {roomId}</h1>
-//         <h1 className="font-semibold">User: {currentUser}</h1>
+
+//       {/* Header */}
+//       <header className="flex justify-between items-center px-6 py-4 bg-gray-900 shadow-md">
+//         <h1 className="font-semibold text-lg">
+//           Room: <span className="text-blue-400">{roomId}</span>
+//         </h1>
+//         <h1 className="font-semibold text-lg">
+//           User: <span className="text-green-400">{currentUser}</span>
+//         </h1>
 //         <button
 //           onClick={handleLogout}
-//           className="bg-red-500 hover:bg-red-700 px-3 py-1 rounded"
+//           className="bg-red-500 hover:bg-red-700 px-4 py-1.5 rounded-full text-sm transition"
 //         >
-//           Leave
+//           Leave Room
 //         </button>
 //       </header>
 
-//       {/* 💬 Messages */}
+//       {/* Messages */}
 //       <div
 //         ref={chatBoxRef}
-//         className="flex-1 overflow-y-auto p-6 space-y-3"
+//         className="flex-1 overflow-y-auto p-6 space-y-3 dark:bg-slate-700"
 //       >
 //         {messages.map((message, index) => (
 //           <div
 //             key={index}
 //             className={`flex ${
-//               message.sender === currentUser
-//                 ? "justify-end"
-//                 : "justify-start"
+//               message.sender === currentUser ? "justify-end" : "justify-start"
 //             }`}
 //           >
 //             <div
-//               className={`p-3 rounded max-w-xs ${
+//               className={`p-3 rounded-lg max-w-xs shadow ${
 //                 message.sender === currentUser
 //                   ? "bg-green-600"
 //                   : "bg-gray-700"
 //               }`}
 //             >
-//               <p className="text-sm font-semibold">
+//               <p className="text-xs font-bold mb-1 opacity-80">
 //                 {message.sender}
 //               </p>
-//               <p>{message.content}</p>
-//               <p className="text-xs text-gray-300">
-//                 {timeAgo(message.timeStamp)}
+//               <p className="text-sm">{message.content}</p>
+//               {/* ✅ Fixed: was message.timeStamp (capital S), backend sends timestamp */}
+//               <p className="text-xs text-gray-300 mt-1">
+//                 {timeAgo(message.timestamp)}
 //               </p>
 //             </div>
 //           </div>
 //         ))}
+
+//         {messages.length === 0 && (
+//           <div className="text-center text-gray-400 mt-20">
+//             No messages yet. Say hello! 👋
+//           </div>
+//         )}
 //       </div>
 
-//       {/* ✏️ Input */}
-//       <div className="flex items-center gap-2 p-4 bg-gray-900">
+//       {/* Input */}
+//       <div className="flex items-center gap-2 p-4 bg-gray-900 border-t border-gray-700">
 //         <input
 //           value={input}
 //           onChange={(e) => setInput(e.target.value)}
 //           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
 //           type="text"
 //           placeholder="Type your message..."
-//           className="flex-1 px-4 py-2 rounded-full bg-gray-800 outline-none"
+//           className="flex-1 px-4 py-2 rounded-full bg-gray-800 outline-none text-white placeholder-gray-400"
 //         />
 
-//         <button className="bg-purple-600 p-2 rounded-full">
+//         <button
+//           title="Attach file"
+//           className="bg-purple-600 hover:bg-purple-700 p-2 rounded-full transition"
+//         >
 //           <MdAttachFile size={20} />
 //         </button>
 
 //         <button
 //           onClick={sendMessage}
-//           className="bg-green-600 p-2 rounded-full"
+//           title="Send message"
+//           className="bg-green-600 hover:bg-green-700 p-2 rounded-full transition"
 //         >
 //           <MdSend size={20} />
 //         </button>
@@ -410,6 +214,7 @@
 // };
 
 // export default ChatPage;
+
 
 
 import React, { useEffect, useRef, useState } from "react";
@@ -462,35 +267,38 @@ const ChatPage = () => {
     }
   }, [connected, roomId]);
 
-  // Auto-scroll on new messages
+  // Auto-scroll
   useEffect(() => {
     if (chatBoxRef.current) {
       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // Connect WebSocket
+  // WebSocket connection
   useEffect(() => {
     if (!connected || !roomId) return;
 
     const sock = new SockJS(`${baseURL}/chat`);
     const client = Stomp.over(sock);
 
-    // Suppress STOMP console noise
     client.debug = () => {};
 
-    client.connect({}, () => {
-      setStompClient(client);
-      toast.success("Connected to room!");
+    client.connect(
+      {},
+      () => {
+        setStompClient(client);
+        toast.success("Connected to room!");
 
-      client.subscribe(`/topic/room/${roomId}`, (message) => {
-        const newMessage = JSON.parse(message.body);
-        setMessages((prev) => [...prev, newMessage]);
-      });
-    }, (error) => {
-      console.error("WebSocket error:", error);
-      toast.error("Connection failed. Please rejoin.");
-    });
+        client.subscribe(`/topic/room/${roomId}`, (message) => {
+          const newMessage = JSON.parse(message.body);
+          setMessages((prev) => [...prev, newMessage]);
+        });
+      },
+      (error) => {
+        console.error("WebSocket error:", error);
+        toast.error("Connection failed. Please rejoin.");
+      }
+    );
 
     return () => {
       if (client && client.connected) {
@@ -518,42 +326,33 @@ const ChatPage = () => {
     setInput("");
   };
 
-  // // Leave room
-  // const handleLogout = () => {
-  //   if (stompClient && stompClient.connected) {
-  //     stompClient.disconnect();
-  //   }
-  //   setConnected(false);
-  //   setRoomId("");
-  //   setCurrentUser("");
-  //   navigate("/");
-  // };
-
-const handleLogout = () => {
-  if (stompClient && stompClient.connected) {
-    stompClient.disconnect();
-  }
-  setConnected(false);
-  setRoomId("");
-  setCurrentUser("");
-  logout();           // ✅ clears JWT from localStorage + AuthContext
-  navigate("/login"); // ✅ send to login instead of "/"
-};
+  // Leave room
+  const handleLogout = () => {
+    if (stompClient && stompClient.connected) {
+      stompClient.disconnect();
+    }
+    setConnected(false);
+    setRoomId("");
+    setCurrentUser("");
+    navigate("/login");
+  };
 
   return (
-    <div className="flex flex-col h-screen dark:bg-slate-800 text-white">
+    <div className="flex flex-col h-screen max-w-3xl mx-auto w-full bg-slate-800 text-white">
 
       {/* Header */}
-      <header className="flex justify-between items-center px-6 py-4 bg-gray-900 shadow-md">
-        <h1 className="font-semibold text-lg">
+      <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 px-4 py-3 bg-gray-900 shadow-md">
+        <h1 className="text-sm sm:text-lg">
           Room: <span className="text-blue-400">{roomId}</span>
         </h1>
-        <h1 className="font-semibold text-lg">
+
+        <h1 className="text-sm sm:text-lg">
           User: <span className="text-green-400">{currentUser}</span>
         </h1>
+
         <button
           onClick={handleLogout}
-          className="bg-red-500 hover:bg-red-700 px-4 py-1.5 rounded-full text-sm transition"
+          className="bg-red-500 hover:bg-red-700 px-3 py-1 rounded-full text-xs sm:text-sm w-fit"
         >
           Leave Room
         </button>
@@ -562,17 +361,19 @@ const handleLogout = () => {
       {/* Messages */}
       <div
         ref={chatBoxRef}
-        className="flex-1 overflow-y-auto p-6 space-y-3 dark:bg-slate-700"
+        className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 bg-slate-700"
       >
         {messages.map((message, index) => (
           <div
             key={index}
             className={`flex ${
-              message.sender === currentUser ? "justify-end" : "justify-start"
+              message.sender === currentUser
+                ? "justify-end"
+                : "justify-start"
             }`}
           >
             <div
-              className={`p-3 rounded-lg max-w-xs shadow ${
+              className={`p-3 rounded-lg max-w-[75%] sm:max-w-md break-words shadow ${
                 message.sender === currentUser
                   ? "bg-green-600"
                   : "bg-gray-700"
@@ -582,7 +383,6 @@ const handleLogout = () => {
                 {message.sender}
               </p>
               <p className="text-sm">{message.content}</p>
-              {/* ✅ Fixed: was message.timeStamp (capital S), backend sends timestamp */}
               <p className="text-xs text-gray-300 mt-1">
                 {timeAgo(message.timestamp)}
               </p>
@@ -598,29 +398,29 @@ const handleLogout = () => {
       </div>
 
       {/* Input */}
-      <div className="flex items-center gap-2 p-4 bg-gray-900 border-t border-gray-700">
+      <div className="flex items-center gap-2 p-3 sm:p-4 bg-gray-900 border-t border-gray-700">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           type="text"
           placeholder="Type your message..."
-          className="flex-1 px-4 py-2 rounded-full bg-gray-800 outline-none text-white placeholder-gray-400"
+          className="flex-1 min-w-0 px-3 py-2 sm:px-4 sm:py-2 rounded-full bg-gray-800 outline-none text-white placeholder-gray-400 text-sm sm:text-base"
         />
 
         <button
           title="Attach file"
-          className="bg-purple-600 hover:bg-purple-700 p-2 rounded-full transition"
+          className="shrink-0 bg-purple-600 hover:bg-purple-700 p-2 rounded-full"
         >
-          <MdAttachFile size={20} />
+          <MdAttachFile size={18} />
         </button>
 
         <button
           onClick={sendMessage}
           title="Send message"
-          className="bg-green-600 hover:bg-green-700 p-2 rounded-full transition"
+          className="shrink-0 bg-green-600 hover:bg-green-700 p-2 rounded-full"
         >
-          <MdSend size={20} />
+          <MdSend size={18} />
         </button>
       </div>
     </div>
