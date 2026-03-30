@@ -5,6 +5,18 @@ import { BrowserRouter } from "react-router";
 import AppRoutes from "./config/routes.jsx";
 import { Toaster } from "react-hot-toast";
 import { ChatProvider } from "./context/ChatContext.jsx";
+import ChatPage from "./components/ChatPage.jsx";
+
+// createRoot(document.getElementById("root")).render(
+//   <BrowserRouter>
+//     <Toaster position="top-center" />
+//     <ChatProvider>
+//       <AppRoutes />
+//     </ChatProvider>
+//   </BrowserRouter>
+
+// );
+
 
 createRoot(document.getElementById("root")).render(
   <BrowserRouter>

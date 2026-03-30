@@ -13,6 +13,6 @@ function App() {
       <JoinCreateChat />
     </div>
   );
-}
+} 
 
 export default App;
